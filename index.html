@@ -866,7 +866,7 @@ function startMic() {
                 if (alt) { cleaned = alt; break; }
             }
 
-            if (result.isFinal && cleaned) {
+            if (cleaned) {
                 // Final confident result — write it and stop immediately
                 resultCommitted = true;
                 if (activeInput) {
