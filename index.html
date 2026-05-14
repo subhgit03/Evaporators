@@ -843,12 +843,14 @@ function startMic() {
 
     let resultCommitted = false; // prevent double-firing
 
-    recognition.onstart = () => {
+recognition.onstart = () => {
         isListening = true;
         resultCommitted = false;
         document.getElementById('micBtn').classList.add('listening');
         document.getElementById('micBtn').textContent = '🔴';
         showToast('🎤 Say a number...', activeInput, 'above');
+        // Auto-stop after 2 seconds — cuts delay after speaking
+        setTimeout(() => { if (isListening && recognition) { try { recognition.stop(); } catch(e) {} } }, 2000);
     };
 
     recognition.onresult = (e) => {
