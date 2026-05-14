@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Evaporators">
@@ -46,14 +46,19 @@ body {
 }
 
 .page-title {
-    font-size: 17px;
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--teal-header);
+    color: white;
     text-align: center;
-    margin: 4px 0 14px 0;
+    background: linear-gradient(135deg, var(--teal-header) 0%, var(--teal-mid) 100%);
     width: 100%;
+    max-width: 420px;
+    margin: 4px 0 14px 0;
+    padding: 14px 12px;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 77, 64, 0.35);
 }
 
 .section-label {
@@ -193,28 +198,27 @@ input.active-input {
 
 #toast {
     position: fixed;
-    bottom: calc(var(--kh, 175px) + 10px);
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: rgba(0,0,0,0.45);
+    top: 0;
+    left: 0;
+    background: rgba(0,0,0,0.28);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    color: rgba(255,255,255,0.92);
+    color: rgba(255,255,255,0.88);
     font-family: 'Source Serif 4', Georgia, serif;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    padding: 7px 16px;
+    padding: 6px 14px;
     border-radius: 20px;
     white-space: nowrap;
     z-index: 1001;
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.22s ease, opacity 0.22s ease;
+    transition: opacity 0.2s ease;
 }
 
-#toast.show { transform: translateX(-50%) translateY(0px); opacity: 1; }
+#toast.show { opacity: 1; }
 
 #confirmOverlay {
     display: none;
@@ -414,14 +418,58 @@ let activeInput = null;
 let currentMode = 'consistency';
 let toastTimer  = null;
 
-function showToast(msg) {
+function showToast(msg, anchorEl, forceDir) {
     const kh = document.getElementById('floatingKeypad').offsetHeight;
     document.documentElement.style.setProperty('--kh', kh + 'px');
     const t = document.getElementById('toast');
     t.textContent = msg;
+    // Reset any previous inline transform
+    t.style.transform = '';
+
+    if (anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        const tW = 190; // approx toast width
+        const tH = 34;  // approx toast height
+        const margin = 10;
+
+        // Decide direction: forced 'below', near-top auto-side, or default above
+        if (forceDir === 'below') {
+            // Show just below the button, centred on it
+            let left = rect.left + rect.width / 2 - tW / 2;
+            left = Math.max(margin, Math.min(left, window.innerWidth - tW - margin));
+            t.style.top  = (rect.bottom + 8) + 'px';
+            t.style.left = left + 'px';
+
+        } else if (rect.top < 130) {
+            // Near top — show to the right, or left if no room
+            let left = rect.right + margin;
+            if (left + tW > window.innerWidth - margin) {
+                left = rect.left - tW - margin;
+            }
+            left = Math.max(margin, left);
+            t.style.top  = Math.max(8, rect.top + rect.height / 2 - tH / 2) + 'px';
+            t.style.left = left + 'px';
+
+        } else {
+            // Normal — just above the tapped cell, horizontally centred
+            let left = rect.left + rect.width / 2 - tW / 2;
+            left = Math.max(margin, Math.min(left, window.innerWidth - tW - margin));
+            t.style.top  = (rect.top - tH - 8) + 'px';
+            t.style.left = left + 'px';
+        }
+    } else {
+        // Fallback — centre top
+        t.style.top  = '20px';
+        t.style.left = '50%';
+        t.style.transform = 'translateX(-50%)';
+    }
+
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+    toastTimer = setTimeout(() => {
+        t.classList.remove('show');
+        t.style.transform = '';
+    }, 1800);
 }
 
 function askConfirm() {
@@ -456,16 +504,18 @@ function setMode(mode) {
         wetLabel.className = 'hatched';
         document.getElementById('wetWeight').value = '';
         resultLabel.textContent = 'TSS (PPM)';
-        document.getElementById('btnTSS').classList.add('active');
+        const btn = document.getElementById('btnTSS');
+        btn.classList.add('active');
         document.getElementById('btnConsistency').classList.remove('active');
-        showToast('TSS Mode — 30ml fixed');
+        showToast('TSS Mode — 30ml fixed', btn, 'below');
     } else {
         wetCell.className = '';
         wetLabel.className = '';
         resultLabel.textContent = 'CONSISTENCY %';
-        document.getElementById('btnConsistency').classList.add('active');
+        const btn = document.getElementById('btnConsistency');
+        btn.classList.add('active');
         document.getElementById('btnTSS').classList.remove('active');
-        showToast('Consistency Mode');
+        showToast('Consistency Mode', btn, 'below');
     }
     recalc();
 }
@@ -557,7 +607,7 @@ function selectInput(input, label) {
             window.scrollBy({ top: rect.bottom - clearance, behavior: 'smooth' });
         }
     }, 60);
-    showToast(label);
+    showToast(label, input);
 }
 
 function addNumber(n) {
